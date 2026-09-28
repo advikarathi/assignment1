@@ -6,7 +6,7 @@ import streamlit as st
 from stock import Stock
 
 
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def load_stock(symbol, start, end, ma_window, ma_long_window=None):
     """Create (and therefore download) a Stock. Cached per argument combination."""
     return Stock(symbol, start=start, end=end, ma_window=ma_window,
@@ -55,16 +55,20 @@ if start >= end:
     st.sidebar.error('Start date must be before end date.')
     st.stop()
 
+fetch = st.sidebar.button('Fetch data', type='primary')
+
 tab_single, tab_portfolio = st.tabs(['Single Stock Analysis', 'Portfolio Comparison'])
 
 # --- Tab 1: Single Stock Analysis ---
 with tab_single:
-    if st.sidebar.button('Fetch data', type='primary'):
+    if fetch:
         # Remember the settings at click time so later widget changes don't refetch.
         st.session_state['single_args'] = (symbol, start, end, ma_window, ma_long_window)
 
     if 'single_args' not in st.session_state:
         st.info('Choose a ticker and settings in the sidebar, then click **Fetch data**.')
+    elif not st.session_state['single_args'][0]:
+        st.error('Enter a ticker symbol in the sidebar.')
     else:
         with st.spinner('Fetching data...'):
             stock = load_stock(*st.session_state['single_args'])
@@ -80,9 +84,9 @@ with tab_single:
             col2.metric('Cumulative log return', f"{stock.data['return'].sum():.2%}")
             col3.metric('Trading days', len(stock.data))
 
-            st.plotly_chart(plot_price_ma(stock))
-            st.plotly_chart(stock.plot_performance())
-            st.plotly_chart(stock.plot_return_dist())
+            st.plotly_chart(plot_price_ma(stock), use_container_width=True)
+            st.plotly_chart(stock.plot_performance(), use_container_width=True)
+            st.plotly_chart(stock.plot_return_dist(), use_container_width=True)
 
             st.subheader('Daily return statistics')
             st.dataframe(stock.data['return'].describe().to_frame())
@@ -114,6 +118,6 @@ with tab_portfolio:
             fig.update_layout(title='Zero-based Cumulative Performance',
                               xaxis_title='Date', yaxis_title='Cumulative log return',
                               legend_title='Ticker')
-            st.plotly_chart(fig)
+            st.plotly_chart(fig, use_container_width=True)
         else:
             st.warning('No tickers downloaded successfully.')

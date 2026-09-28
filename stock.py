@@ -1,11 +1,11 @@
 import numpy as np
-import pandas as pd
 import plotly.express as px
 import yfinance as yf
 
+
 class Stock:
-    def __init__(self, symbol, start=None, end=None, ma_window: int = 10,
-                 ma_long_window: int = None):
+    def __init__(self, symbol, start=None, end=None, ma_window=10,
+                 ma_long_window=None):
         self.symbol = symbol
         self.start = start
         self.end = end
@@ -26,43 +26,49 @@ class Stock:
             data = self._calc_ma(data, self.ma_window)
             if self.ma_long_window is not None:
                 data = self._calc_ma(data, self.ma_long_window, column='MA_long')
-            return data, f"Sucessfully downloaded for {self.symbol}"
+            return data, f"Successfully downloaded for {self.symbol}"
         except Exception as e:
-            return None, f"failed due to {e}"
+            return None, f"Failed due to {e}"
 
-    def _calc_returns(self, df : {__setitem__,__getitem__,dropna}):
+    def _calc_returns(self, df):
         df['change'] = df['Close'] - df['Close'].shift(1)
         df['return'] = np.log(df['Close']).diff().round(4)
-        return df.dropna()
+        # First trading day has no prior close; keep later MA NaNs in place.
+        return df.dropna(subset=['change', 'return'])
 
-    def _calc_ma(self, df : {__setitem__,__getitem__},window, column='MA'):
+    def _calc_ma(self, df, window, column='MA'):
         df[column] = df['Close'].rolling(window=window).mean()
         return df
 
     def plot_performance(self):
-        """return plotly line chart of cumulative (log) return"""
-        cum_return = self.data['return'].cumsum()
-        fig = px.line(cum_return,
+        """Return a Plotly line chart of cumulative (log) return."""
+        performance = self.data['return'].cumsum()
+        fig = px.line(x=performance.index,
+                      y=performance.values,
                       title=f'Cumulative Return for {self.symbol}',
-                      labels={'value': 'Cumulative Return', 'Date': 'Date'})
-        fig.update_layout(showlegend=False)
+                      labels={'x': 'Date', 'y': 'Cumulative Return'})
+        fig.update_traces(line=dict(color='#2ca02c', width=2))
+        fig.add_hline(y=0, line_dash='dash', line_color='black', opacity=0.7)
+        fig.update_layout(yaxis_tickformat='.1%', hovermode='x unified',
+                          showlegend=False)
         return fig
 
     def plot_return_dist(self):
-        """return plotly histogram showing dist of daily returns"""
+        """Return a Plotly histogram of daily log returns."""
         mean_return = self.data['return'].mean()
         fig = px.histogram(self.data['return'],
                            nbins=35,
                            title=f'Distribution of Daily Returns for {self.symbol}',
-                           labels={'value':"Return", 'count': 'Frequency'})
-
-        fig.update_traces(marker_line_color= 'rgb(255,0,0)',
+                           labels={'value': 'Return', 'count': 'Frequency'},
+                           opacity=0.85,
+                           color_discrete_sequence=['#1f77b4'])
+        fig.update_traces(marker_line_color='rgb(255,255,255)',
                           marker_line_width=0.5)
         fig.add_vline(x=mean_return,
-                      line_dash="dash",
-                      line_color="red",
-                      annotation_text=f"Mean: {mean_return: .2F}",
-                      annotation_position="top right")
+                      line_dash='dash',
+                      line_color='red',
+                      annotation_text=f'Mean: {mean_return:.4f}',
+                      annotation_position='top right')
         return fig
 
 
