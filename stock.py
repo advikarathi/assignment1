@@ -23,6 +23,8 @@ class Stock:
             if data.empty:
                 return None, f"No data found for {self.symbol}"
             data = self._calc_returns(data)
+            if data.empty:
+                return None, f"Not enough data for {self.symbol}; choose a longer date range"
             data = self._calc_ma(data, self.ma_window)
             if self.ma_long_window is not None:
                 data = self._calc_ma(data, self.ma_long_window, column='MA_long')

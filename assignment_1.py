@@ -84,9 +84,9 @@ with tab_single:
             col2.metric('Cumulative log return', f"{stock.data['return'].sum():.2%}")
             col3.metric('Trading days', len(stock.data))
 
-            st.plotly_chart(plot_price_ma(stock), use_container_width=True)
-            st.plotly_chart(stock.plot_performance(), use_container_width=True)
-            st.plotly_chart(stock.plot_return_dist(), use_container_width=True)
+            st.plotly_chart(plot_price_ma(stock))
+            st.plotly_chart(stock.plot_performance())
+            st.plotly_chart(stock.plot_return_dist())
 
             st.subheader('Daily return statistics')
             st.dataframe(stock.data['return'].describe().to_frame())
@@ -95,7 +95,8 @@ with tab_single:
 with tab_portfolio:
     tickers_text = st.text_input('Ticker symbols (comma-separated)',
                                  value='AAPL, MSFT, GOOG')
-    tickers = [t.strip().upper() for t in tickers_text.split(',') if t.strip()]
+    # dict.fromkeys drops repeated tickers while keeping their order.
+    tickers = list(dict.fromkeys(t.strip().upper() for t in tickers_text.split(',') if t.strip()))
 
     if st.button('Compare'):
         st.session_state['portfolio_args'] = (tuple(tickers), start, end, ma_window)
@@ -118,6 +119,6 @@ with tab_portfolio:
             fig.update_layout(title='Zero-based Cumulative Performance',
                               xaxis_title='Date', yaxis_title='Cumulative log return',
                               legend_title='Ticker')
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig)
         else:
             st.warning('No tickers downloaded successfully.')
